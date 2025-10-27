@@ -2,8 +2,12 @@ from datetime import datetime
 # Импортировать функцию для выбора случайного значения.
 from random import randrange
 
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, TextAreaField, URLField
+from wtforms.validators import DataRequired, Length, Optional
+
 
 app = Flask(__name__)
 
@@ -12,9 +16,10 @@ app = Flask(__name__)
 # для относительного адреса в ОС Unix/Mac/Windows
 # Подключить БД SQLite.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
-# Создать экземпляр класса SQLAlchemy и передать 
+# Создать экземпляр класса SQLAlchemy и передать
 # в качестве параметра экземпляр приложения Flask.
 db = SQLAlchemy(app)
+app.config['SECRET_KEY'] = 'very-secret-string'
 
 
 class Opinion(db.Model):
@@ -22,14 +27,31 @@ class Opinion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # Название фильма — строка длиной 128 символов, не может быть пустым.
     title = db.Column(db.String(128), nullable=False)
-    # Мнение о фильме — большая строка, не может быть пустым, 
+    # Мнение о фильме — большая строка, не может быть пустым,
     # должно быть уникальным.
     text = db.Column(db.Text, unique=True, nullable=False)
     # Ссылка на сторонний источник — строка длиной 256 символов.
     source = db.Column(db.String(256))
-    # Дата и время — текущее время, 
+    # Дата и время — текущее время,
     # по этому столбцу база данных будет проиндексирована.
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+
+class OpinionForm(FlaskForm):
+    title = StringField(
+        'Введите название фильма',
+        validators=[DataRequired(message='Обязательное поле'),
+                    Length(1, 128)]
+    )
+    text = TextAreaField(
+        'Напишите мнение',
+        validators=[DataRequired(message='Обязательное поле')]
+    )
+    source = URLField(
+        'Добавьте ссылку на подробный обзор фильма',
+        validators=[Length(1, 256), Optional()]
+    )
+    submit = SubmitField('Добавить')
 
 
 @app.route('/')
@@ -58,15 +80,32 @@ def index_view():
 # Параметром указывается имя переменной.
 def opinion_view(id):
     # Теперь можно запросить нужный объект по id...
-    opinion = Opinion.query.get(id)  
+    opinion = Opinion.query.get_or_404(id)
     # ...и передать его в шаблон (шаблон - тот же, что и для главной страницы).
     return render_template('opinion.html', opinion=opinion)
 
 
-@app.route('/add')
+@app.route('/add', methods=['GET', 'POST'])
 def add_opinion_view():
     # return 'Страница в разработке!'
-    return render_template('add_opinion.html')
+    form = OpinionForm()
+    # Если ошибок не возникло...
+    if form.validate_on_submit():
+        # ...то нужно создать новый экземпляр класса Opinion...
+        opinion = Opinion(
+            # ...и передать в него данные, полученные из формы.
+            title=form.title.data,
+            text=form.text.data,
+            source=form.source.data
+        )
+        # Затем добавить его в сессию работы с базой данных...
+        db.session.add(opinion)
+        # ...и зафиксировать изменения.
+        db.session.commit()
+        # Затем переадресовать пользователя на страницу добавленного мнения.
+        return redirect(url_for('opinion_view', id=opinion.id))
+    # Если валидация не пройдена - просто отрисовать страницу с формой.
+    return render_template('add_opinion.html', form=form)
 
 
 if __name__ == '__main__':

@@ -5,7 +5,58 @@
   <section class="container my-5">
     <div class="row">
       <h1>Добавить мнение о фильме</h1>
-      <div class="col-12 col-lg-7 my-5"></div>
+      <div class="col-12 col-lg-7 my-5">
+        <!-- Добавить тег form и указать, 
+        что отправлять форму надо методом POST, а валидировать в браузере не надо -->
+        <form method="POST" novalidate>
+          <!-- Подключение к форме CSRF-токена -->
+          {{ form.csrf_token }}
+          <!-- Вывод полей формы в шаблоне: -->
+          <!-- {{ заголовок_формы }} {{ поле_ввода }} -->
+          {# form.title.label #}
+          {{ form.title(
+              class="form-control form-control-lg py-3 mb-3",
+              placeholder=form.title.label.text
+            ) }}
+              {% if form.title.errors %}
+                <p class="text-danger">
+                  {% for error in form.title.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </p>
+              {% endif %}
+            <br />
+          {# form.text.label #}
+          {{ form.text(
+              class="form-control form-control-lg py-3 mb-3",
+              placeholder=form.text.label.text,
+              rows="3", cols="40"
+            ) }}
+              {% if form.text.errors %}
+                <p class="text-danger">
+                  {% for error in form.text.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </p>
+              {% endif %}
+            <br />
+          {# form.source.label #}
+          {{ form.source(
+            class="form-control form-control-lg py-3 mb-3",
+            placeholder=form.source.label.text
+          ) }}
+              {% if form.source.errors %}
+                <p class="text-danger">
+                  {% for error in form.source.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </p>
+              {% endif %}
+          <br />
+          <!-- Кнопка отправки формы -->
+          {{ form.submit(class="button px-5 py-3 btn") }}
+        </form>
+      </div>
       <div class="col-12 col-lg-5">
         <img class="img-fluid mx-auto d-block" src="{{ url_for('static', filename='img/illustration.png') }}" alt="" />
       </div>
