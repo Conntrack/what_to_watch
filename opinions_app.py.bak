@@ -1,8 +1,10 @@
+import csv
 from datetime import datetime
 # Импортировать функцию для выбора случайного значения.
 from random import randrange
 
-from flask import Flask, abort, redirect, render_template, url_for
+import click
+from flask import Flask, abort, flash, redirect, render_template, url_for
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
@@ -17,11 +19,12 @@ app = Flask(__name__)
 # для относительного адреса в ОС Unix/Mac/Windows
 # Подключить БД SQLite.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
+app.config['SECRET_KEY'] = 'very-secret-string'
+
 # Создать экземпляр класса SQLAlchemy и передать
 # в качестве параметра экземпляр приложения Flask.
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-app.config['SECRET_KEY'] = 'very-secret-string'
 
 
 class Opinion(db.Model):
@@ -118,6 +121,10 @@ def add_opinion_view():
     form = OpinionForm()
     # Если ошибок не возникло...
     if form.validate_on_submit():
+        text = form.text.data
+        if Opinion.query.filter_by(text=text).first() is not None:
+            flash('Такое мнение уже было оставлено ранее!')
+            return render_template('add_opinion.html', form=form)
         # ...то нужно создать новый экземпляр класса Opinion...
         opinion = Opinion(
             # ...и передать в него данные, полученные из формы.
@@ -133,6 +140,27 @@ def add_opinion_view():
         return redirect(url_for('opinion_view', id=opinion.id))
     # Если валидация не пройдена - просто отрисовать страницу с формой.
     return render_template('add_opinion.html', form=form)
+
+
+@app.cli.command('load_opinions')
+def load_opinions_command():
+    """Функция загрузки мнений в базу данных."""
+    # Открыть файл.
+    with open('opinions.csv', encoding='utf-8') as f:
+        # Создать итерируемый объект, который отображает каждую строку
+        # в качестве словаря с ключами из шапки файла.
+        reader = csv.DictReader(f)
+        # Для подсчёта строк добавить счётчик.
+        counter = 0
+        for row in reader:
+            # Распакованный словарь использовать
+            # для создания экземпляра модели Opinion.
+            opinion = Opinion(**row)
+            # Добавить объект в сессию и закоммитить
+            db.session.add(opinion)
+            db.session.commit()
+            counter += 1
+    click.echo(f'Загружено мнений: {counter}')
 
 
 if __name__ == '__main__':
