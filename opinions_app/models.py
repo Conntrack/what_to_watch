@@ -17,3 +17,21 @@ class Opinion(db.Model):
     # по этому столбцу база данных будет проиндексирована.
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     added_by = db.Column(db.String(64))
+
+    def to_dict(self):
+        return dict(
+            id = self.id,
+            title = self.title,
+            text = self.text,
+            source = self.source,
+            timestamp = self.timestamp,
+            added_by = self.added_by
+        )
+
+    def from_dict(self, data: dict):
+        for field in ['title', 'text', 'source', 'added_by']:
+            # ...выполнить проверку — есть ли ключ с таким же именем в словаре.
+            if field in data:
+                # Если есть, добавить значение из словаря
+                # в соответствующее поле объекта модели.
+                setattr(self, field, data[field])
