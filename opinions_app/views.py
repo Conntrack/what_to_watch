@@ -7,24 +7,21 @@ from .forms import OpinionForm
 from .models import Opinion
 
 
+def random_opinion():
+    quantity = Opinion.query.count()
+    if quantity:
+        offset_value = randrange(quantity)
+        # ...и определить случайный объект.
+        return Opinion.query.offset(offset_value).first()
+
+
 @app.route('/')
 def index_view():
-    # Добавьте эту инструкцию.
-    # print(app.config)
     # return 'Совсем скоро тут будет случайное мнение о фильме!'
-    # Определить количество мнений в базе данных.
-    quantity = Opinion.query.count()
-    # Если мнений нет...
-    if not quantity:
-        # ...то вернуть сообщение:
-        # return 'В базе данных мнений о фильмах нет.'
-        # Если в базе пусто - при запросе к главной странице
-        # пользователь увидит ошибку 500.
+    opinion = random_opinion()
+    # Если random_opinion() вернула None, значит, в БД нет записей.
+    if opinion is None:
         abort(500)
-    # Иначе выбрать случайное число в диапазоне от 0 до quantity...
-    offset_value = randrange(quantity)
-    # ...и определить случайный объект.
-    opinion = Opinion.query.offset(offset_value).first()
     # return opinion.text
     # context = {'opinions_quantity': quantity, 'opinion': opinion}
     # return render_template('index.html', **context)
